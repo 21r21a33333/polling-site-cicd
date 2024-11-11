@@ -1,0 +1,115 @@
+name: Deploy to AWS EC2 with Docker
+
+on:
+  push:
+    branches:
+      - main # Trigger deployment on pushes to the main branch
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    env:
+      AWS_REGION: ap-south-1 # AWS region
+      DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }} # Docker Hub username
+      DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }} # Docker Hub password
+      IMAGE_TAG: latest # Image tag for both frontend and backend
+
+    steps:
+      # 1. Checkout code
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      # 2. Build and push the backend Docker image to Docker Hub
+      - name: Build and push backend Docker image to Docker Hub
+        run: |
+          # Build backend image
+          docker build -f backend/Dockerfile \
+            --build-arg DATABASE_URL=${{ secrets.DATABASE_URL }} \
+            --build-arg JWT_SECRET=${{ secrets.JWT_SECRET }} \
+            -t $DOCKER_USERNAME/pollingsite-be:$IMAGE_TAG backend
+
+          # Log in to Docker Hub
+          echo $DOCKER_PASSWORD | docker login -u $DOCKER_USERNAME --password-stdin
+
+          # Push the backend image to Docker Hub
+          docker push $DOCKER_USERNAME/pollingsite-be:$IMAGE_TAG
+
+      # 3. Build and push the frontend Docker image to Docker Hub
+      - name: Build and push frontend Docker image to Docker Hub
+        run: |
+          # Build frontend image
+          docker build -f frontend/Dockerfile \
+            --build-arg NEXT_PUBLIC_API_URL=http://${{secrets.server_url}}:3001 \
+            -t $DOCKER_USERNAME/pollingsite-fe:$IMAGE_TAG frontend
+
+          # Push the frontend image to Docker Hub
+          docker push $DOCKER_USERNAME/pollingsite-fe:$IMAGE_TAG
+
+      # 4. SSH into EC2 and install Docker and Docker Compose
+      - name: SSH into EC2 and Install Docker
+        uses: appleboy/ssh-action@v0.1.7
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            # Update the system
+            sudo apt-get update -y
+
+            # Install dependencies
+            sudo apt-get install -y \
+              apt-transport-https \
+              ca-certificates \
+              curl \
+              software-properties-common
+
+            # Install Docker
+            curl -fsSL https://get.docker.com -o get-docker.sh
+            sudo sh get-docker.sh
+
+            # Install Docker Compose
+            sudo curl -L "https://github.com/docker/compose/releases/download/1.29.2/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+            sudo chmod +x /usr/local/bin/docker-compose
+
+            # Start Docker service
+            sudo systemctl enable docker
+            sudo systemctl start docker
+
+      # 5. SSH into EC2 to deploy containers
+      - name: SSH into EC2 and deploy containers
+        uses: appleboy/ssh-action@v0.1.7
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            # Pull the Docker images from Docker Hub
+            docker pull $DOCKER_USERNAME/pollingsite-be:$IMAGE_TAG
+            docker pull $DOCKER_USERNAME/pollingsite-fe:$IMAGE_TAG
+
+            # Create a docker-compose.yml file
+            echo "
+            version: '3.8'
+            services:
+              backend:
+                image: $DOCKER_USERNAME/pollingsite-be:$IMAGE_TAG
+                ports:
+                  - '3001:3001'
+                environment:
+                  - DATABASE_URL=${{ secrets.DATABASE_URL }}
+                  - JWT_SECRET=${{ secrets.JWT_SECRET }}
+
+              frontend:
+                image: $DOCKER_USERNAME/pollingsite-fe:$IMAGE_TAG
+                ports:
+                  - '3000:3000'
+                environment:
+                  - NEXT_PUBLIC_API_URL=http://${{secrets.server_url}}:3001
+                depends_on:
+                  - backend
+            " > /home/ubuntu/docker-compose.yml
+
+            # Start the containers with Docker Compose
+            cd /home/ubuntu
+            sudo docker-compose up -d
