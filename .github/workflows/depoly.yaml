@@ -23,11 +23,10 @@ jobs:
       # 2. Build and push the backend Docker image to Docker Hub
       - name: Build and push backend Docker image to Docker Hub
         run: |
-          # Build backend image
           docker build -f polling-site-backend/Dockerfile \
-            --build-arg DATABASE_URL=${{ secrets.DATABASE_URL }} \
-            --build-arg JWT_SECRET=${{ secrets.JWT_SECRET }} \
-            -t $DOCKER_USERNAME/pollingsite-be:$IMAGE_TAG backend
+          --build-arg DATABASE_URL=${{ secrets.DATABASE_URL }} \
+          --build-arg JWT_SECRET=${{ secrets.JWT_SECRET }} \
+          -t $DOCKER_USERNAME/pollingsite-be:$IMAGE_TAG polling-site-backend
 
           # Log in to Docker Hub
           echo $DOCKER_PASSWORD | docker login -u $DOCKER_USERNAME --password-stdin
