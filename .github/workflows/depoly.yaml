@@ -84,15 +84,15 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
             # Pull the Docker images from Docker Hub
-            docker pull $DOCKER_USERNAME/pollingsite-be:$IMAGE_TAG
-            docker pull $DOCKER_USERNAME/pollingsite-fe:$IMAGE_TAG
+            docker pull ${{secrets.DOCKER_USERNAME}}/pollingsite-be:$IMAGE_TAG
+            docker pull ${{secrets.DOCKER_USERNAME}}/pollingsite-fe:$IMAGE_TAG
 
             # Create a docker-compose.yml file
             echo "
             version: '3.8'
             services:
               backend:
-                image: $DOCKER_USERNAME/pollingsite-be:$IMAGE_TAG
+                image: ${{secrets.DOCKER_USERNAME}}/pollingsite-be:$IMAGE_TAG
                 ports:
                   - '3001:3001'
                 environment:
@@ -100,7 +100,7 @@ jobs:
                   - JWT_SECRET=${{ secrets.JWT_SECRET }}
 
               frontend:
-                image: $DOCKER_USERNAME/pollingsite-fe:$IMAGE_TAG
+                image: ${{secrets.DOCKER_USERNAME}}/pollingsite-fe:$IMAGE_TAG
                 ports:
                   - '3000:3000'
                 environment:
