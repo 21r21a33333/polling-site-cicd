@@ -20,6 +20,16 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
+      # 2. Cache Docker layers for the backend
+      - name: Cache Docker layers for backend
+        id: backend-cache
+        uses: actions/cache@v3
+        with:
+          path: /tmp/.buildx-cache
+          key: ${{ runner.os }}-docker-backend-${{ hashFiles('polling-site-backend/Dockerfile', 'polling-site-backend/**/*') }}
+          restore-keys: |
+            ${{ runner.os }}-docker-backend-
+
       # 2. Build and push the backend Docker image to Docker Hub
       - name: Build and push backend Docker image to Docker Hub
         run: |
@@ -33,6 +43,15 @@ jobs:
 
           # Push the backend image to Docker Hub
           docker push $DOCKER_USERNAME/pollingsite-be:$IMAGE_TAG
+
+      - name: Cache Docker layers for frontend
+        id: frontend-cache
+        uses: actions/cache@v3
+        with:
+          path: /tmp/.buildx-cache
+          key: ${{ runner.os }}-docker-frontend-${{ hashFiles('polling-site-frontend/Dockerfile', 'polling-site-frontend/**/*') }}
+          restore-keys: |
+            ${{ runner.os }}-docker-frontend-
 
       # 3. Build and push the frontend Docker image to Docker Hub
       - name: Build and push frontend Docker image to Docker Hub
@@ -92,7 +111,7 @@ jobs:
             version: '3.8'
             services:
               backend:
-                image: ${{secrets.DOCKER_USERNAME}}/pollingsite-be:$IMAGE_TAG
+                image: ${{secrets.DOCKER_USERNAME}}/pollingsite-be:latest
                 ports:
                   - '3001:3001'
                 environment:
@@ -100,7 +119,7 @@ jobs:
                   - JWT_SECRET=${{ secrets.JWT_SECRET }}
 
               frontend:
-                image: ${{secrets.DOCKER_USERNAME}}/pollingsite-fe:$IMAGE_TAG
+                image: ${{secrets.DOCKER_USERNAME}}/pollingsite-fe:latest
                 ports:
                   - '3000:3000'
                 environment:
