@@ -39,7 +39,7 @@ jobs:
         run: |
           # Build frontend image
           docker build -f polling-site-frontend/Dockerfile \
-            --build-arg NEXT_PUBLIC_API_URL=http://${{secrets.server_url}}:3001 \
+            --build-arg NEXT_PUBLIC_API_URL=http://${{ secrets.SERVER_URL }}:3001 \
             -t $DOCKER_USERNAME/pollingsite-fe:$IMAGE_TAG polling-site-frontend
 
           # Push the frontend image to Docker Hub
@@ -104,10 +104,13 @@ jobs:
                 ports:
                   - '3000:3000'
                 environment:
-                  - NEXT_PUBLIC_API_URL=http://${{secrets.server_url}}:3001
+                  - NEXT_PUBLIC_API_URL=http://${{ secrets.SERVER_URL }}:3001
                 depends_on:
                   - backend
             " > /home/ubuntu/docker-compose.yml
+
+            # Check if docker-compose.yml was created
+            cat /home/ubuntu/docker-compose.yml
 
             # Start the containers with Docker Compose
             cd /home/ubuntu
