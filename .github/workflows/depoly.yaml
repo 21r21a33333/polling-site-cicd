@@ -24,7 +24,7 @@ jobs:
       - name: Build and push backend Docker image to Docker Hub
         run: |
           # Build backend image
-          docker build -f backend/Dockerfile \
+          docker build -f polling-site-backend/Dockerfile \
             --build-arg DATABASE_URL=${{ secrets.DATABASE_URL }} \
             --build-arg JWT_SECRET=${{ secrets.JWT_SECRET }} \
             -t $DOCKER_USERNAME/pollingsite-be:$IMAGE_TAG backend
@@ -39,7 +39,7 @@ jobs:
       - name: Build and push frontend Docker image to Docker Hub
         run: |
           # Build frontend image
-          docker build -f frontend/Dockerfile \
+          docker build -f polling-site-frontend/Dockerfile \
             --build-arg NEXT_PUBLIC_API_URL=http://${{secrets.server_url}}:3001 \
             -t $DOCKER_USERNAME/pollingsite-fe:$IMAGE_TAG frontend
 
