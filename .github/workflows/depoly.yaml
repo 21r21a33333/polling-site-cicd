@@ -40,7 +40,7 @@ jobs:
           # Build frontend image
           docker build -f polling-site-frontend/Dockerfile \
             --build-arg NEXT_PUBLIC_API_URL=http://${{secrets.server_url}}:3001 \
-            -t $DOCKER_USERNAME/pollingsite-fe:$IMAGE_TAG frontend
+            -t $DOCKER_USERNAME/pollingsite-fe:$IMAGE_TAG polling-site-frontend
 
           # Push the frontend image to Docker Hub
           docker push $DOCKER_USERNAME/pollingsite-fe:$IMAGE_TAG
